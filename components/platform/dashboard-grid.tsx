@@ -236,7 +236,7 @@ function getDefaultWidgetData(type: DashboardWidgetType): Record<string, unknown
 }
 
 // ---- Main Dashboard Grid Component ----
-export function DashboardGrid() {
+export function DashboardGrid({ viewName = 'Dashboard' }: { viewName?: string }) {
   const {
     widgets,
     isEditMode,
@@ -306,7 +306,7 @@ export function DashboardGrid() {
       {/* Toolbar */}
       <div className="sticky top-0 z-20 bg-background border-b px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold">Dashboard</h1>
+          <h1 className="text-lg font-semibold">{viewName}</h1>
           {isEditMode && (
             <Badge variant="secondary" className="bg-primary/10 text-primary">
               Modo Edicion
@@ -726,10 +726,15 @@ function BarChartWidget({ widget }: { widget: DashboardWidget }) {
 }
 
 // ---- Export DashboardView for use in workspace ----
-export function DashboardView() {
+interface DashboardViewProps {
+  viewId?: string
+  viewName?: string
+}
+
+export function DashboardView({ viewId = 'default', viewName = 'Dashboard' }: DashboardViewProps) {
   return (
-    <DashboardGridProvider>
-      <DashboardGrid />
+    <DashboardGridProvider key={viewId}>
+      <DashboardGrid viewName={viewName} />
     </DashboardGridProvider>
   )
 }
