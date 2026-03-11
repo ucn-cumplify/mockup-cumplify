@@ -4,14 +4,17 @@ import React, { useState, useEffect } from 'react'
 import { usePlatform, type AppModule, type AppTable, type AppView, type AppColumn, type ViewType } from '@/lib/platform-context'
 import { RequisitosLegalesApp } from '@/components/requisitos-legales/requisitos-legales-app'
 import { MatrizRiesgoApp } from '@/components/matriz-riesgo/matriz-riesgo-app'
+import { DashboardView as InteractiveDashboard } from '@/components/platform/dashboard-grid'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { useShortcuts, type Shortcut } from '@/lib/shortcuts-context'
 import { categoryConfig } from '@/lib/platform-context'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
@@ -576,16 +579,85 @@ function FormView({ table, app, onUpdateApp }: { table: AppTable; app: AppModule
 }
 
 // ---- Main Workspace ----
+// Custom View with Dashboard Data
+interface CustomViewData {
+  viewId: string
+  dashboardWidgets: unknown[]
+}
+
 export function AppWorkspace() {
   const { activeApp, setActiveApp, setCurrentView, updateApp, initialViewId } = usePlatform()
   const { addShortcut, removeShortcut, isShortcut } = useShortcuts()
   const [activeViewId, setActiveViewId] = useState<string | null>(initialViewId)
+  
+  // Dialog states for adding/deleting views
+  const [showAddViewDialog, setShowAddViewDialog] = useState(false)
+  const [newViewName, setNewViewName] = useState('')
+  const [viewToDelete, setViewToDelete] = useState<AppView | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  
+  // Store custom view dashboard data
+  const [customViewData, setCustomViewData] = useState<CustomViewData[]>([])
 
   useEffect(() => {
     if (initialViewId) {
       setActiveViewId(initialViewId)
     }
   }, [initialViewId])
+  
+  // Create a new custom view
+  const handleCreateView = () => {
+    if (!newViewName.trim() || !activeApp) return
+    
+    const newView: AppView = {
+      id: `view-${Date.now()}`,
+      name: newViewName.trim(),
+      type: 'dashboard',
+      tableId: activeApp.tables[0]?.id || '',
+    }
+    
+    const updatedViews = [...activeApp.views, newView]
+    updateApp(activeApp.id, { views: updatedViews })
+    
+    // Initialize empty dashboard data for this view
+    setCustomViewData(prev => [...prev, { viewId: newView.id, dashboardWidgets: [] }])
+    
+    setActiveViewId(newView.id)
+    setNewViewName('')
+    setShowAddViewDialog(false)
+    
+    toast.success('Vista creada', {
+      description: `La vista "${newView.name}" ha sido creada exitosamente.`,
+    })
+  }
+  
+  // Delete a view
+  const handleDeleteView = () => {
+    if (!viewToDelete || !activeApp) return
+    
+    const updatedViews = activeApp.views.filter(v => v.id !== viewToDelete.id)
+    updateApp(activeApp.id, { views: updatedViews })
+    
+    // Remove custom view data
+    setCustomViewData(prev => prev.filter(d => d.viewId !== viewToDelete.id))
+    
+    // If deleting active view, switch to first available
+    if (activeViewId === viewToDelete.id) {
+      setActiveViewId(updatedViews[0]?.id || null)
+    }
+    
+    toast.success('Vista eliminada', {
+      description: `La vista "${viewToDelete.name}" ha sido eliminada.`,
+    })
+    
+    setViewToDelete(null)
+    setShowDeleteConfirm(false)
+  }
+  
+  // Check if a view is a custom view (created by user, not default)
+  const isCustomView = (view: AppView) => {
+    return view.id.startsWith('view-')
+  }
 
   if (!activeApp) return null
 
@@ -659,13 +731,18 @@ export function AppWorkspace() {
   }
 
   const renderView = () => {
-    if (!activeView || !activeTable) {
-      return (
-        <div className="py-16 text-center text-muted-foreground">
-          <p className="text-sm">No hay vistas configuradas para esta aplicacion.</p>
-          <p className="text-xs mt-2">Agrega tablas y vistas desde la configuracion del modulo.</p>
-        </div>
-      )
+    if (!activeView) {
+      // Show interactive dashboard grid when no views are configured
+      return <InteractiveDashboard viewId="default" viewName="Dashboard" />
+    }
+    
+    // Custom views (created by user) always show interactive dashboard
+    if (isCustomView(activeView)) {
+      return <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
+    }
+
+    if (!activeTable) {
+      return <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
     }
 
     switch (activeView.type) {
@@ -676,7 +753,10 @@ export function AppWorkspace() {
       case 'calendar':
         return <CalendarView table={activeTable} />
       case 'dashboard':
-        return <DashboardView table={activeTable} app={activeApp} />
+        // Use interactive dashboard grid for dashboard views
+        return activeTable?.rows?.length > 0 
+          ? <DashboardView table={activeTable} app={activeApp} />
+          : <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
       case 'form':
         return <FormView table={activeTable} app={activeApp} onUpdateApp={handleUpdateApp} />
       case 'timeline':
@@ -732,31 +812,58 @@ export function AppWorkspace() {
           </div>
 
           {/* View tabs */}
-          {views.length > 0 && (
-            <div className="mt-3 flex items-center gap-1 -mb-px">
-              {views.map(view => {
-                const VIcon = viewIcons[view.type] || Table2
-                const isActive = (activeView?.id === view.id) || (!activeViewId && view.id === views[0]?.id)
-                return (
-                  <button
-                    key={view.id}
-                    onClick={() => setActiveViewId(view.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
-                      isActive
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                    }`}
-                  >
-                    <VIcon className="h-3.5 w-3.5" />
-                    {view.name}
-                  </button>
-                )
-              })}
-              <button className="flex items-center gap-1 px-3 py-2 text-xs text-muted-foreground hover:text-foreground border-b-2 border-transparent">
-                <Plus className="h-3 w-3" /> Vista
-              </button>
-            </div>
-          )}
+          <div className="mt-3 flex items-center gap-1 -mb-px">
+            {views.map(view => {
+              const VIcon = viewIcons[view.type] || Table2
+              const isActive = (activeView?.id === view.id) || (!activeViewId && view.id === views[0]?.id)
+              const canDelete = isCustomView(view)
+              
+              return (
+                <DropdownMenu key={view.id}>
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => setActiveViewId(view.id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                        isActive
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                      }`}
+                    >
+                      <VIcon className="h-3.5 w-3.5" />
+                      {view.name}
+                    </button>
+                    {canDelete && isActive && (
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-1 hover:bg-muted rounded transition-colors -ml-1">
+                          <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </DropdownMenuTrigger>
+                    )}
+                  </div>
+                  {canDelete && (
+                    <DropdownMenuContent align="start" className="w-40">
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => {
+                          setViewToDelete(view)
+                          setShowDeleteConfirm(true)
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Eliminar vista
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  )}
+                </DropdownMenu>
+              )
+            })}
+            <button 
+              onClick={() => setShowAddViewDialog(true)}
+              className="flex items-center gap-1 px-3 py-2 text-xs text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+            >
+              <Plus className="h-3 w-3" /> Vista
+            </button>
+          </div>
         </div>
       </header>
 
@@ -764,6 +871,68 @@ export function AppWorkspace() {
       <div className="flex-1 p-6">
         {renderView()}
       </div>
+      
+      {/* Add View Dialog */}
+      <Dialog open={showAddViewDialog} onOpenChange={setShowAddViewDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nueva Vista</DialogTitle>
+            <DialogDescription>
+              Crea una nueva vista personalizada para este modulo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="view-name">Nombre de la vista</Label>
+              <Input
+                id="view-name"
+                placeholder="Ej: Mi Dashboard, Vista Resumen..."
+                value={newViewName}
+                onChange={(e) => setNewViewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newViewName.trim()) {
+                    handleCreateView()
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddViewDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateView} disabled={!newViewName.trim()}>
+              Crear Vista
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete View Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar vista</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion eliminara la vista "{viewToDelete?.name}" y todos los widgets configurados. Esta accion no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setViewToDelete(null)
+              setShowDeleteConfirm(false)
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteView}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
