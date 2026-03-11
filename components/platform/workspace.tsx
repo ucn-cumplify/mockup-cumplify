@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { usePlatform, type AppModule, type AppTable, type AppView, type AppColumn, type ViewType } from '@/lib/platform-context'
 import { RequisitosLegalesApp } from '@/components/requisitos-legales/requisitos-legales-app'
 import { MatrizRiesgoApp } from '@/components/matriz-riesgo/matriz-riesgo-app'
+import { DashboardView as InteractiveDashboard } from '@/components/platform/dashboard-grid'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -660,12 +661,8 @@ export function AppWorkspace() {
 
   const renderView = () => {
     if (!activeView || !activeTable) {
-      return (
-        <div className="py-16 text-center text-muted-foreground">
-          <p className="text-sm">No hay vistas configuradas para esta aplicacion.</p>
-          <p className="text-xs mt-2">Agrega tablas y vistas desde la configuracion del modulo.</p>
-        </div>
-      )
+      // Show interactive dashboard grid when no views are configured
+      return <InteractiveDashboard />
     }
 
     switch (activeView.type) {
@@ -676,7 +673,10 @@ export function AppWorkspace() {
       case 'calendar':
         return <CalendarView table={activeTable} />
       case 'dashboard':
-        return <DashboardView table={activeTable} app={activeApp} />
+        // Use interactive dashboard grid for dashboard views
+        return activeTable?.rows?.length > 0 
+          ? <DashboardView table={activeTable} app={activeApp} />
+          : <InteractiveDashboard />
       case 'form':
         return <FormView table={activeTable} app={activeApp} onUpdateApp={handleUpdateApp} />
       case 'timeline':
