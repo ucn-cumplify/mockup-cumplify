@@ -6,6 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   GripVertical,
   Trash2,
@@ -17,11 +23,21 @@ import {
   Hash,
   X,
   Move,
-  LayoutGrid
+  LayoutGrid,
+  Table2,
+  Scale,
+  ShieldAlert,
+  Settings,
+  MoreVertical,
+  ChevronDown,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+  Eye
 } from 'lucide-react'
 
 // ---- Types ----
-export type DashboardWidgetType = 'kpi' | 'pie-chart' | 'bar-chart'
+export type DashboardWidgetType = 'kpi' | 'pie-chart' | 'bar-chart' | 'custom-table' | 'mini-requisitos' | 'mini-matriz'
 
 export interface DashboardWidget {
   id: string
@@ -49,13 +65,24 @@ const widgetSizeConfig: Record<DashboardWidgetType, { cols: number; rows: number
   'kpi': { cols: 1, rows: 1 },
   'pie-chart': { cols: 2, rows: 2 },
   'bar-chart': { cols: 2, rows: 1 },
+  'custom-table': { cols: 4, rows: 3 },
+  'mini-requisitos': { cols: 4, rows: 4 },
+  'mini-matriz': { cols: 4, rows: 4 },
 }
 
+// Widget categories
+type WidgetCategory = 'visualizacion' | 'modulos'
+
 // Widget templates
-const widgetTemplates: { type: DashboardWidgetType; label: string; icon: typeof PieChart; description: string }[] = [
-  { type: 'kpi', label: 'Card de KPI', icon: Hash, description: 'Componente pequeno 1x1 que muestra un KPI' },
-  { type: 'pie-chart', label: 'Grafico de Torta', icon: PieChart, description: 'Grafico circular 2x2 para datos visuales' },
-  { type: 'bar-chart', label: 'Grafico de Barras', icon: BarChart3, description: 'Grafico en barras 2x1 comparativo' },
+const widgetTemplates: { type: DashboardWidgetType; label: string; icon: typeof PieChart; description: string; category: WidgetCategory }[] = [
+  // Visualization widgets
+  { type: 'kpi', label: 'Card de KPI', icon: Hash, description: 'Componente pequeno 1x1 que muestra un KPI', category: 'visualizacion' },
+  { type: 'pie-chart', label: 'Grafico de Torta', icon: PieChart, description: 'Grafico circular 2x2 para datos visuales', category: 'visualizacion' },
+  { type: 'bar-chart', label: 'Grafico de Barras', icon: BarChart3, description: 'Grafico en barras 2x1 comparativo', category: 'visualizacion' },
+  // Module widgets (reusable logic)
+  { type: 'custom-table', label: 'Tabla Personalizada', icon: Table2, description: 'Crea una tabla con columnas configurables', category: 'modulos' },
+  { type: 'mini-requisitos', label: 'Mini Obligaciones Legales', icon: Scale, description: 'Modulo de vinculaciones, evaluaciones y hallazgos', category: 'modulos' },
+  { type: 'mini-matriz', label: 'Mini Matriz de Riesgo', icon: ShieldAlert, description: 'Modulo IPER: peligros, riesgos y medidas', category: 'modulos' },
 ]
 
 // ---- Dashboard Grid Context ----
@@ -208,6 +235,22 @@ export function DashboardGridProvider({ children, initialWidgets = [] }: { child
   )
 }
 
+// Column types for custom tables
+export type ColumnType = 'text' | 'number' | 'select' | 'date' | 'status' | 'link'
+
+export interface TableColumn {
+  id: string
+  name: string
+  type: ColumnType
+  options?: string[] // For select type
+  width?: number
+}
+
+export interface TableRow {
+  id: string
+  cells: Record<string, unknown>
+}
+
 // Default data for widgets
 function getDefaultWidgetData(type: DashboardWidgetType): Record<string, unknown> {
   switch (type) {
@@ -229,6 +272,72 @@ function getDefaultWidgetData(type: DashboardWidgetType): Record<string, unknown
           { label: 'Mar', value: 38 },
           { label: 'Abr', value: 61 },
         ]
+      }
+    case 'custom-table':
+      return {
+        columns: [
+          { id: 'col-1', name: 'Nombre', type: 'text' },
+          { id: 'col-2', name: 'Estado', type: 'select', options: ['Activo', 'Inactivo', 'Pendiente'] },
+          { id: 'col-3', name: 'Fecha', type: 'date' },
+        ] as TableColumn[],
+        rows: [] as TableRow[],
+        title: 'Mi Tabla',
+      }
+    case 'mini-requisitos':
+      return {
+        title: 'Obligaciones Legales',
+        vinculaciones: [] as Array<{
+          id: string
+          norma: string
+          articulo: string
+          unidadControl: string
+          criticidad: 'alta' | 'media' | 'baja'
+          estado: 'pendiente' | 'cumple' | 'no-cumple' | 'parcial'
+        }>,
+        evaluaciones: [] as Array<{
+          id: string
+          fecha: string
+          responsable: string
+          resultados: number
+        }>,
+        hallazgos: [] as Array<{
+          id: string
+          descripcion: string
+          tipo: 'nc-mayor' | 'nc-menor' | 'observacion'
+          estado: 'abierto' | 'en-proceso' | 'cerrado'
+        }>,
+      }
+    case 'mini-matriz':
+      return {
+        title: 'Matriz de Riesgo',
+        procesos: [] as Array<{
+          id: string
+          nombre: string
+          tareas: Array<{
+            id: string
+            nombre: string
+            peligros: Array<{
+              id: string
+              descripcion: string
+              riesgo: string
+              probabilidad: number
+              consecuencia: number
+              vep: number
+              nivel: 'bajo' | 'medio' | 'alto' | 'critico'
+              medidas: string[]
+            }>
+          }>
+        }>,
+        configuracion: {
+          escalaProbabilidad: [1, 2, 3, 4, 5],
+          escalaConsecuencia: [1, 2, 3, 4, 5],
+          nivelesRiesgo: [
+            { min: 1, max: 4, nivel: 'bajo', color: '#22c55e' },
+            { min: 5, max: 9, nivel: 'medio', color: '#f59e0b' },
+            { min: 10, max: 16, nivel: 'alto', color: '#f97316' },
+            { min: 17, max: 25, nivel: 'critico', color: '#ef4444' },
+          ]
+        }
       }
     default:
       return {}
@@ -431,6 +540,7 @@ function WidgetPalette({
 }) {
   const { addWidget, getOccupiedCells } = useDashboardGrid()
   const [open, setOpen] = useState(false)
+  const [activeCategory, setActiveCategory] = useState<WidgetCategory>('visualizacion')
 
   // Find first available position for a widget type
   const findFirstAvailablePosition = (type: DashboardWidgetType): { col: number; row: number } | null => {
@@ -463,6 +573,13 @@ function WidgetPalette({
     }
   }
 
+  const filteredTemplates = widgetTemplates.filter(t => t.category === activeCategory)
+
+  const categoryConfig: Record<WidgetCategory, { label: string; description: string }> = {
+    visualizacion: { label: 'Visualizacion', description: 'Graficos y KPIs para mostrar datos' },
+    modulos: { label: 'Modulos', description: 'Componentes con logica reutilizable' },
+  }
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -471,53 +588,94 @@ function WidgetPalette({
           Agregar Widget
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80">
+      <SheetContent side="left" className="w-96">
         <SheetHeader>
           <SheetTitle>Componentes</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 space-y-3">
-          {widgetTemplates.map(template => {
-            const size = widgetSizeConfig[template.type]
-            return (
-              <div
-                key={template.type}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = 'move'
-                  onDragStart(template.type)
-                }}
-                onDragEnd={onDragEnd}
-                className="p-4 border rounded-lg cursor-grab active:cursor-grabbing hover:border-primary hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <template.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">{template.label}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {size.cols}x{size.rows}
-                      </Badge>
+        
+        {/* Category Tabs */}
+        <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as WidgetCategory)} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="visualizacion" className="text-xs">
+              <BarChart3 className="w-3 h-3 mr-1" />
+              Visualizacion
+            </TabsTrigger>
+            <TabsTrigger value="modulos" className="text-xs">
+              <LayoutGrid className="w-3 h-3 mr-1" />
+              Modulos
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={activeCategory} className="mt-4">
+            <p className="text-xs text-muted-foreground mb-4">
+              {categoryConfig[activeCategory].description}
+            </p>
+            <ScrollArea className="h-[calc(100vh-220px)]">
+              <div className="space-y-3 pr-4">
+                {filteredTemplates.map(template => {
+                  const size = widgetSizeConfig[template.type]
+                  const isModule = template.category === 'modulos'
+                  
+                  return (
+                    <div
+                      key={template.type}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move'
+                        onDragStart(template.type)
+                      }}
+                      onDragEnd={onDragEnd}
+                      className={`p-4 border rounded-lg cursor-grab active:cursor-grabbing hover:border-primary hover:bg-muted/50 transition-colors ${
+                        isModule ? 'border-dashed' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          template.type === 'mini-requisitos' ? 'bg-teal-500/10' :
+                          template.type === 'mini-matriz' ? 'bg-red-500/10' :
+                          template.type === 'custom-table' ? 'bg-blue-500/10' :
+                          'bg-primary/10'
+                        }`}>
+                          <template.icon className={`h-5 w-5 ${
+                            template.type === 'mini-requisitos' ? 'text-teal-600' :
+                            template.type === 'mini-matriz' ? 'text-red-600' :
+                            template.type === 'custom-table' ? 'text-blue-600' :
+                            'text-primary'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="text-sm font-medium truncate">{template.label}</h4>
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              {size.cols}x{size.rows}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {template.description}
+                          </p>
+                          {isModule && (
+                            <Badge variant="secondary" className="mt-2 text-xs">
+                              Logica Reutilizable
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full mt-3"
+                        onClick={() => handleAddWidget(template.type)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Agregar
+                      </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {template.description}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full mt-3"
-                  onClick={() => handleAddWidget(template.type)}
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Agregar
-                </Button>
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   )
@@ -601,6 +759,12 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
       return <PieChartWidget widget={widget} />
     case 'bar-chart':
       return <BarChartWidget widget={widget} />
+    case 'custom-table':
+      return <CustomTableWidget widget={widget} />
+    case 'mini-requisitos':
+      return <MiniRequisitosWidget widget={widget} />
+    case 'mini-matriz':
+      return <MiniMatrizWidget widget={widget} />
     default:
       return (
         <Card className="h-full">
@@ -721,6 +885,669 @@ function BarChartWidget({ widget }: { widget: DashboardWidget }) {
           </div>
         ))}
       </CardContent>
+    </Card>
+  )
+}
+
+// ---- Custom Table Widget (4x3) ----
+function CustomTableWidget({ widget }: { widget: DashboardWidget }) {
+  const { setWidgets } = useDashboardGrid()
+  const data = widget.data as { columns: TableColumn[]; rows: TableRow[]; title: string }
+  const [showAddColumn, setShowAddColumn] = useState(false)
+  const [newColumnName, setNewColumnName] = useState('')
+  const [newColumnType, setNewColumnType] = useState<ColumnType>('text')
+  const [showAddRow, setShowAddRow] = useState(false)
+
+  const handleAddColumn = () => {
+    if (!newColumnName.trim()) return
+    const newColumn: TableColumn = {
+      id: `col-${Date.now()}`,
+      name: newColumnName.trim(),
+      type: newColumnType,
+      options: newColumnType === 'select' ? ['Opcion 1', 'Opcion 2', 'Opcion 3'] : undefined,
+    }
+    const updatedData = { ...data, columns: [...data.columns, newColumn] }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+    setNewColumnName('')
+    setNewColumnType('text')
+    setShowAddColumn(false)
+  }
+
+  const handleAddRow = () => {
+    const newRow: TableRow = {
+      id: `row-${Date.now()}`,
+      cells: data.columns.reduce((acc, col) => ({ ...acc, [col.id]: '' }), {}),
+    }
+    const updatedData = { ...data, rows: [...data.rows, newRow] }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+  }
+
+  const handleCellChange = (rowId: string, colId: string, value: unknown) => {
+    const updatedRows = data.rows.map(row => 
+      row.id === rowId ? { ...row, cells: { ...row.cells, [colId]: value } } : row
+    )
+    const updatedData = { ...data, rows: updatedRows }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+  }
+
+  const handleDeleteRow = (rowId: string) => {
+    const updatedData = { ...data, rows: data.rows.filter(r => r.id !== rowId) }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+  }
+
+  return (
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="py-2 px-3 border-b flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <Table2 className="h-4 w-4 text-blue-600" />
+          <CardTitle className="text-sm font-medium">{data.title}</CardTitle>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowAddColumn(true)}>
+            <Plus className="h-3 w-3 mr-1" />
+            Columna
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleAddRow}>
+            <Plus className="h-3 w-3 mr-1" />
+            Fila
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-0 overflow-auto">
+        {data.columns.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <Table2 className="h-8 w-8 text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground">Agrega columnas para comenzar</p>
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 sticky top-0">
+              <tr>
+                {data.columns.map(col => (
+                  <th key={col.id} className="px-2 py-1.5 text-left font-medium text-muted-foreground border-b">
+                    {col.name}
+                  </th>
+                ))}
+                <th className="w-8 border-b"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={data.columns.length + 1} className="px-2 py-4 text-center text-muted-foreground">
+                    Sin datos. Agrega filas para comenzar.
+                  </td>
+                </tr>
+              ) : (
+                data.rows.map(row => (
+                  <tr key={row.id} className="border-b hover:bg-muted/30">
+                    {data.columns.map(col => (
+                      <td key={col.id} className="px-2 py-1">
+                        {col.type === 'select' ? (
+                          <select
+                            value={String(row.cells[col.id] || '')}
+                            onChange={(e) => handleCellChange(row.id, col.id, e.target.value)}
+                            className="w-full bg-transparent text-xs border-0 focus:ring-0 p-0"
+                          >
+                            <option value="">Seleccionar...</option>
+                            {col.options?.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                            value={String(row.cells[col.id] || '')}
+                            onChange={(e) => handleCellChange(row.id, col.id, e.target.value)}
+                            className="w-full bg-transparent text-xs border-0 focus:ring-0 p-0"
+                            placeholder="..."
+                          />
+                        )}
+                      </td>
+                    ))}
+                    <td className="px-1">
+                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleDeleteRow(row.id)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
+      </CardContent>
+
+      {/* Add Column Dialog */}
+      <Dialog open={showAddColumn} onOpenChange={setShowAddColumn}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nueva Columna</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nombre</Label>
+              <Input value={newColumnName} onChange={(e) => setNewColumnName(e.target.value)} placeholder="Nombre de la columna" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={newColumnType} onValueChange={(v) => setNewColumnType(v as ColumnType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Texto</SelectItem>
+                  <SelectItem value="number">Numero</SelectItem>
+                  <SelectItem value="date">Fecha</SelectItem>
+                  <SelectItem value="select">Seleccion</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddColumn(false)}>Cancelar</Button>
+            <Button onClick={handleAddColumn} disabled={!newColumnName.trim()}>Agregar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}
+
+// ---- Mini Requisitos (Obligaciones Legales) Widget (4x4) ----
+function MiniRequisitosWidget({ widget }: { widget: DashboardWidget }) {
+  const { setWidgets } = useDashboardGrid()
+  const data = widget.data as {
+    title: string
+    vinculaciones: Array<{
+      id: string
+      norma: string
+      articulo: string
+      unidadControl: string
+      criticidad: 'alta' | 'media' | 'baja'
+      estado: 'pendiente' | 'cumple' | 'no-cumple' | 'parcial'
+    }>
+    evaluaciones: Array<{ id: string; fecha: string; responsable: string; resultados: number }>
+    hallazgos: Array<{ id: string; descripcion: string; tipo: 'nc-mayor' | 'nc-menor' | 'observacion'; estado: 'abierto' | 'en-proceso' | 'cerrado' }>
+  }
+  
+  const [activeTab, setActiveTab] = useState<'vinculaciones' | 'hallazgos'>('vinculaciones')
+  const [showAddVinculacion, setShowAddVinculacion] = useState(false)
+  const [newVinculacion, setNewVinculacion] = useState({ norma: '', articulo: '', unidadControl: '', criticidad: 'media' as const })
+
+  const handleAddVinculacion = () => {
+    if (!newVinculacion.norma.trim()) return
+    const vinculacion = {
+      id: `vinc-${Date.now()}`,
+      ...newVinculacion,
+      estado: 'pendiente' as const,
+    }
+    const updatedData = { ...data, vinculaciones: [...data.vinculaciones, vinculacion] }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+    setNewVinculacion({ norma: '', articulo: '', unidadControl: '', criticidad: 'media' })
+    setShowAddVinculacion(false)
+  }
+
+  const handleUpdateEstado = (vinculacionId: string, estado: 'pendiente' | 'cumple' | 'no-cumple' | 'parcial') => {
+    const updatedVinculaciones = data.vinculaciones.map(v => 
+      v.id === vinculacionId ? { ...v, estado } : v
+    )
+    const updatedData = { ...data, vinculaciones: updatedVinculaciones }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+  }
+
+  const estadoColors = {
+    'pendiente': 'bg-gray-100 text-gray-700',
+    'cumple': 'bg-green-100 text-green-700',
+    'no-cumple': 'bg-red-100 text-red-700',
+    'parcial': 'bg-yellow-100 text-yellow-700',
+  }
+
+  const criticidadColors = {
+    'alta': 'bg-red-500',
+    'media': 'bg-yellow-500',
+    'baja': 'bg-green-500',
+  }
+
+  // Stats
+  const cumple = data.vinculaciones.filter(v => v.estado === 'cumple').length
+  const noCumple = data.vinculaciones.filter(v => v.estado === 'no-cumple').length
+  const parcial = data.vinculaciones.filter(v => v.estado === 'parcial').length
+  const pendiente = data.vinculaciones.filter(v => v.estado === 'pendiente').length
+
+  return (
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="py-2 px-3 border-b flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <Scale className="h-4 w-4 text-teal-600" />
+          <CardTitle className="text-sm font-medium">{data.title}</CardTitle>
+          <Badge variant="secondary" className="text-xs">{data.vinculaciones.length}</Badge>
+        </div>
+      </CardHeader>
+      
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-1 p-2 border-b bg-muted/30">
+        <div className="text-center">
+          <div className="text-lg font-bold text-green-600">{cumple}</div>
+          <div className="text-xs text-muted-foreground">Cumple</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-yellow-600">{parcial}</div>
+          <div className="text-xs text-muted-foreground">Parcial</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-red-600">{noCumple}</div>
+          <div className="text-xs text-muted-foreground">No Cumple</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-gray-600">{pendiente}</div>
+          <div className="text-xs text-muted-foreground">Pendiente</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center border-b px-2">
+        <button
+          onClick={() => setActiveTab('vinculaciones')}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === 'vinculaciones' ? 'border-teal-500 text-teal-600' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          Vinculaciones
+        </button>
+        <button
+          onClick={() => setActiveTab('hallazgos')}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === 'hallazgos' ? 'border-teal-500 text-teal-600' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          Hallazgos ({data.hallazgos.length})
+        </button>
+        <div className="flex-1" />
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setShowAddVinculacion(true)}>
+          <Plus className="h-3 w-3 mr-1" />
+          Agregar
+        </Button>
+      </div>
+
+      <CardContent className="flex-1 p-0 overflow-auto">
+        {activeTab === 'vinculaciones' && (
+          data.vinculaciones.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <Scale className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              <p className="text-xs text-muted-foreground">Sin vinculaciones. Agrega normativas para evaluar.</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {data.vinculaciones.map(vinc => (
+                <div key={vinc.id} className="p-2 hover:bg-muted/30">
+                  <div className="flex items-start gap-2">
+                    <div className={`w-1 h-full rounded-full ${criticidadColors[vinc.criticidad]}`} style={{ minHeight: '40px' }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium truncate">{vinc.norma}</span>
+                        <span className="text-xs text-muted-foreground">Art. {vinc.articulo}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">{vinc.unidadControl}</div>
+                    </div>
+                    <select
+                      value={vinc.estado}
+                      onChange={(e) => handleUpdateEstado(vinc.id, e.target.value as typeof vinc.estado)}
+                      className={`text-xs px-1.5 py-0.5 rounded border-0 ${estadoColors[vinc.estado]}`}
+                    >
+                      <option value="pendiente">Pendiente</option>
+                      <option value="cumple">Cumple</option>
+                      <option value="parcial">Parcial</option>
+                      <option value="no-cumple">No Cumple</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+        {activeTab === 'hallazgos' && (
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <AlertTriangle className="h-8 w-8 text-muted-foreground/50 mb-2" />
+            <p className="text-xs text-muted-foreground">Los hallazgos se generan al evaluar vinculaciones</p>
+          </div>
+        )}
+      </CardContent>
+
+      {/* Add Vinculacion Dialog */}
+      <Dialog open={showAddVinculacion} onOpenChange={setShowAddVinculacion}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nueva Vinculacion</DialogTitle>
+            <DialogDescription>Agrega una normativa para evaluar su cumplimiento</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Norma/Decreto</Label>
+              <Input value={newVinculacion.norma} onChange={(e) => setNewVinculacion(p => ({ ...p, norma: e.target.value }))} placeholder="Ej: D.S. 40/2012" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Articulo</Label>
+              <Input value={newVinculacion.articulo} onChange={(e) => setNewVinculacion(p => ({ ...p, articulo: e.target.value }))} placeholder="Ej: 5" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Unidad de Control</Label>
+              <Input value={newVinculacion.unidadControl} onChange={(e) => setNewVinculacion(p => ({ ...p, unidadControl: e.target.value }))} placeholder="Ej: Planta Principal" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Criticidad</Label>
+              <Select value={newVinculacion.criticidad} onValueChange={(v) => setNewVinculacion(p => ({ ...p, criticidad: v as 'alta' | 'media' | 'baja' }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="media">Media</SelectItem>
+                  <SelectItem value="baja">Baja</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAddVinculacion(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleAddVinculacion} disabled={!newVinculacion.norma.trim()}>Agregar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}
+
+// ---- Mini Matriz de Riesgo Widget (4x4) ----
+function MiniMatrizWidget({ widget }: { widget: DashboardWidget }) {
+  const { setWidgets } = useDashboardGrid()
+  const data = widget.data as {
+    title: string
+    procesos: Array<{
+      id: string
+      nombre: string
+      tareas: Array<{
+        id: string
+        nombre: string
+        peligros: Array<{
+          id: string
+          descripcion: string
+          riesgo: string
+          probabilidad: number
+          consecuencia: number
+          vep: number
+          nivel: 'bajo' | 'medio' | 'alto' | 'critico'
+          medidas: string[]
+        }>
+      }>
+    }>
+    configuracion: {
+      escalaProbabilidad: number[]
+      escalaConsecuencia: number[]
+      nivelesRiesgo: Array<{ min: number; max: number; nivel: string; color: string }>
+    }
+  }
+  
+  const [activeTab, setActiveTab] = useState<'identificacion' | 'matriz'>('identificacion')
+  const [showAddProceso, setShowAddProceso] = useState(false)
+  const [showAddPeligro, setShowAddPeligro] = useState(false)
+  const [selectedProcesoId, setSelectedProcesoId] = useState<string | null>(null)
+  const [newProceso, setNewProceso] = useState('')
+  const [newPeligro, setNewPeligro] = useState({ descripcion: '', riesgo: '', probabilidad: 3, consecuencia: 3 })
+
+  // Count all peligros
+  const allPeligros = data.procesos.flatMap(p => p.tareas.flatMap(t => t.peligros))
+  const countByNivel = {
+    bajo: allPeligros.filter(p => p.nivel === 'bajo').length,
+    medio: allPeligros.filter(p => p.nivel === 'medio').length,
+    alto: allPeligros.filter(p => p.nivel === 'alto').length,
+    critico: allPeligros.filter(p => p.nivel === 'critico').length,
+  }
+
+  const getNivel = (vep: number): 'bajo' | 'medio' | 'alto' | 'critico' => {
+    if (vep <= 4) return 'bajo'
+    if (vep <= 9) return 'medio'
+    if (vep <= 16) return 'alto'
+    return 'critico'
+  }
+
+  const nivelColors = {
+    'bajo': 'bg-green-100 text-green-700',
+    'medio': 'bg-yellow-100 text-yellow-700',
+    'alto': 'bg-orange-100 text-orange-700',
+    'critico': 'bg-red-100 text-red-700',
+  }
+
+  const handleAddProceso = () => {
+    if (!newProceso.trim()) return
+    const proceso = {
+      id: `proc-${Date.now()}`,
+      nombre: newProceso.trim(),
+      tareas: [{ id: `tarea-${Date.now()}`, nombre: 'Tarea General', peligros: [] }],
+    }
+    const updatedData = { ...data, procesos: [...data.procesos, proceso] }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+    setNewProceso('')
+    setShowAddProceso(false)
+  }
+
+  const handleAddPeligro = () => {
+    if (!newPeligro.descripcion.trim() || !selectedProcesoId) return
+    const vep = newPeligro.probabilidad * newPeligro.consecuencia
+    const peligro = {
+      id: `peligro-${Date.now()}`,
+      ...newPeligro,
+      vep,
+      nivel: getNivel(vep),
+      medidas: [],
+    }
+    
+    const updatedProcesos = data.procesos.map(proc => {
+      if (proc.id === selectedProcesoId && proc.tareas[0]) {
+        return {
+          ...proc,
+          tareas: [{
+            ...proc.tareas[0],
+            peligros: [...proc.tareas[0].peligros, peligro]
+          }]
+        }
+      }
+      return proc
+    })
+    
+    const updatedData = { ...data, procesos: updatedProcesos }
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: updatedData } : w))
+    setNewPeligro({ descripcion: '', riesgo: '', probabilidad: 3, consecuencia: 3 })
+    setShowAddPeligro(false)
+  }
+
+  return (
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="py-2 px-3 border-b flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-red-600" />
+          <CardTitle className="text-sm font-medium">{data.title}</CardTitle>
+          <Badge variant="secondary" className="text-xs">{allPeligros.length} riesgos</Badge>
+        </div>
+      </CardHeader>
+      
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-1 p-2 border-b bg-muted/30">
+        <div className="text-center">
+          <div className="text-lg font-bold text-green-600">{countByNivel.bajo}</div>
+          <div className="text-xs text-muted-foreground">Bajo</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-yellow-600">{countByNivel.medio}</div>
+          <div className="text-xs text-muted-foreground">Medio</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-orange-600">{countByNivel.alto}</div>
+          <div className="text-xs text-muted-foreground">Alto</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-bold text-red-600">{countByNivel.critico}</div>
+          <div className="text-xs text-muted-foreground">Critico</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center border-b px-2">
+        <button
+          onClick={() => setActiveTab('identificacion')}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === 'identificacion' ? 'border-red-500 text-red-600' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          Identificacion
+        </button>
+        <button
+          onClick={() => setActiveTab('matriz')}
+          className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === 'matriz' ? 'border-red-500 text-red-600' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          Matriz PxC
+        </button>
+        <div className="flex-1" />
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setShowAddProceso(true)}>
+          <Plus className="h-3 w-3 mr-1" />
+          Proceso
+        </Button>
+      </div>
+
+      <CardContent className="flex-1 p-0 overflow-auto">
+        {activeTab === 'identificacion' && (
+          data.procesos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <ShieldAlert className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              <p className="text-xs text-muted-foreground">Agrega procesos para identificar peligros</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {data.procesos.map(proceso => (
+                <div key={proceso.id} className="p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium">{proceso.nombre}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-5 px-1.5 text-xs"
+                      onClick={() => { setSelectedProcesoId(proceso.id); setShowAddPeligro(true) }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  {proceso.tareas[0]?.peligros.map(peligro => (
+                    <div key={peligro.id} className="ml-2 pl-2 border-l-2 border-muted py-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs truncate flex-1">{peligro.descripcion}</span>
+                        <Badge className={`text-xs ml-1 ${nivelColors[peligro.nivel]}`}>
+                          VEP: {peligro.vep}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )
+        )}
+        
+        {activeTab === 'matriz' && (
+          <div className="p-3">
+            <div className="text-xs text-center text-muted-foreground mb-2">Matriz Probabilidad x Consecuencia</div>
+            <div className="grid grid-cols-6 gap-0.5 text-xs max-w-xs mx-auto">
+              <div className="p-1"></div>
+              {[1, 2, 3, 4, 5].map(c => (
+                <div key={c} className="p-1 text-center font-medium text-muted-foreground">C{c}</div>
+              ))}
+              {[5, 4, 3, 2, 1].map(p => (
+                <React.Fragment key={p}>
+                  <div className="p-1 font-medium text-muted-foreground">P{p}</div>
+                  {[1, 2, 3, 4, 5].map(c => {
+                    const vep = p * c
+                    const nivel = getNivel(vep)
+                    const count = allPeligros.filter(pel => pel.probabilidad === p && pel.consecuencia === c).length
+                    return (
+                      <div
+                        key={`${p}-${c}`}
+                        className={`p-1 text-center rounded text-xs ${nivelColors[nivel]} ${count > 0 ? 'font-bold ring-2 ring-foreground/20' : ''}`}
+                      >
+                        {count > 0 ? count : vep}
+                      </div>
+                    )
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      {/* Add Proceso Dialog */}
+      <Dialog open={showAddProceso} onOpenChange={setShowAddProceso}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nuevo Proceso</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label className="text-xs">Nombre del Proceso</Label>
+            <Input value={newProceso} onChange={(e) => setNewProceso(e.target.value)} placeholder="Ej: Operaciones de Planta" className="h-8 text-sm" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAddProceso(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleAddProceso} disabled={!newProceso.trim()}>Agregar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Peligro Dialog */}
+      <Dialog open={showAddPeligro} onOpenChange={setShowAddPeligro}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuevo Peligro/Riesgo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Peligro</Label>
+              <Input value={newPeligro.descripcion} onChange={(e) => setNewPeligro(p => ({ ...p, descripcion: e.target.value }))} placeholder="Descripcion del peligro" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Riesgo Asociado</Label>
+              <Input value={newPeligro.riesgo} onChange={(e) => setNewPeligro(p => ({ ...p, riesgo: e.target.value }))} placeholder="Descripcion del riesgo" className="h-8 text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Probabilidad (1-5)</Label>
+                <Select value={String(newPeligro.probabilidad)} onValueChange={(v) => setNewPeligro(p => ({ ...p, probabilidad: Number(v) }))}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Consecuencia (1-5)</Label>
+                <Select value={String(newPeligro.consecuencia)} onValueChange={(v) => setNewPeligro(p => ({ ...p, consecuencia: Number(v) }))}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="p-2 bg-muted rounded text-center">
+              <span className="text-xs text-muted-foreground">VEP: </span>
+              <span className={`text-sm font-bold px-2 py-0.5 rounded ${nivelColors[getNivel(newPeligro.probabilidad * newPeligro.consecuencia)]}`}>
+                {newPeligro.probabilidad * newPeligro.consecuencia} ({getNivel(newPeligro.probabilidad * newPeligro.consecuencia)})
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAddPeligro(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleAddPeligro} disabled={!newPeligro.descripcion.trim()}>Agregar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
