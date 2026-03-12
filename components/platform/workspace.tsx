@@ -578,11 +578,411 @@ function FormView({ table, app, onUpdateApp }: { table: AppTable; app: AppModule
   )
 }
 
-// ---- Main Workspace ----
-// Custom View with Dashboard Data
-interface CustomViewData {
+// ---- Custom Requisitos Legales View (Cloned Logic) ----
+interface CustomRLViewProps {
   viewId: string
+  viewName: string
+  data?: {
+    vinculaciones: unknown[]
+    evaluaciones: unknown[]
+    resultados: unknown[]
+    hallazgos: unknown[]
+  }
+  onUpdateData: (data: { vinculaciones: unknown[]; evaluaciones: unknown[]; resultados: unknown[]; hallazgos: unknown[] }) => void
+}
+
+function CustomRequisitosLegalesView({ viewId, viewName, data, onUpdateData }: CustomRLViewProps) {
+  const [activeTab, setActiveTab] = useState<'identificacion' | 'evaluacion' | 'control' | 'historial'>('identificacion')
+  
+  // Initialize data if empty
+  const viewData = data || { vinculaciones: [], evaluaciones: [], resultados: [], hallazgos: [] }
+  
+  const tabConfig = [
+    { id: 'identificacion', label: 'Identificacion', icon: Search, description: 'Vincula articulos normativos con unidades de control' },
+    { id: 'evaluacion', label: 'Evaluacion', icon: CheckCircle2, description: 'Evalua el cumplimiento de cada vinculacion' },
+    { id: 'control', label: 'Control', icon: ShieldAlert, description: 'Gestiona hallazgos y acciones correctivas' },
+    { id: 'historial', label: 'Historial', icon: Clock, description: 'Registro de todas las actividades' },
+  ] as const
+  
+  return (
+    <div className="space-y-6">
+      {/* View Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10">
+            <Scale className="h-5 w-5 text-teal-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">{viewName}</h2>
+            <p className="text-sm text-muted-foreground">Vista tipo Requisitos Legales</p>
+          </div>
+        </div>
+        <Badge variant="outline" className="border-teal-500/50 text-teal-600">
+          Logica Clonada
+        </Badge>
+      </div>
+      
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 border-b">
+        {tabConfig.map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                isActive 
+                  ? 'border-teal-500 text-teal-600' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+      
+      {/* Tab Content */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {tabConfig.find(t => t.id === activeTab)?.label}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {tabConfig.find(t => t.id === activeTab)?.description}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {activeTab === 'identificacion' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {viewData.vinculaciones.length} vinculaciones registradas
+                </p>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nueva Vinculacion
+                </Button>
+              </div>
+              {viewData.vinculaciones.length === 0 ? (
+                <div className="py-12 text-center border-2 border-dashed rounded-lg">
+                  <Scale className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="font-medium text-muted-foreground mb-2">Sin vinculaciones</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Comienza creando vinculaciones entre articulos normativos y unidades de control
+                  </p>
+                  <Button variant="outline" size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Crear Primera Vinculacion
+                  </Button>
+                </div>
+              ) : (
+                <div className="border rounded-lg divide-y">
+                  {/* Table headers */}
+                  <div className="grid grid-cols-5 gap-4 px-4 py-2 bg-muted/50 text-xs font-medium text-muted-foreground">
+                    <div>Decreto/Articulo</div>
+                    <div>Unidad de Control</div>
+                    <div>Criticidad</div>
+                    <div>Estado</div>
+                    <div>Acciones</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'evaluacion' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">Evaluaciones</h3>
+              <p className="text-sm text-muted-foreground">
+                Crea evaluaciones para medir el cumplimiento de las vinculaciones
+              </p>
+            </div>
+          )}
+          
+          {activeTab === 'control' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">
+                {viewData.hallazgos.length} hallazgos
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Gestiona los hallazgos detectados en las evaluaciones
+              </p>
+            </div>
+          )}
+          
+          {activeTab === 'historial' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">Historial de Actividades</h3>
+              <p className="text-sm text-muted-foreground">
+                Registro cronologico de todas las acciones realizadas
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ---- Custom Matriz Riesgo View (Cloned Logic) ----
+interface CustomMRViewProps {
+  viewId: string
+  viewName: string
+  data?: {
+    procesos: unknown[]
+    tareas: unknown[]
+    filasIPER: unknown[]
+    medidas: unknown[]
+    parametros: unknown
+  }
+  onUpdateData: (data: { procesos: unknown[]; tareas: unknown[]; filasIPER: unknown[]; medidas: unknown[]; parametros: unknown }) => void
+}
+
+function CustomMatrizRiesgoView({ viewId, viewName, data, onUpdateData }: CustomMRViewProps) {
+  const [activeTab, setActiveTab] = useState<'identificacion' | 'evaluacion' | 'verificaciones' | 'matriz' | 'parametros'>('identificacion')
+  
+  const viewData = data || { procesos: [], tareas: [], filasIPER: [], medidas: [], parametros: {} }
+  
+  const tabConfig = [
+    { id: 'identificacion', label: 'Identificacion', icon: Search, description: 'Define procesos, tareas y peligros' },
+    { id: 'evaluacion', label: 'Evaluacion', icon: CheckCircle2, description: 'Evalua riesgos con Probabilidad x Consecuencia' },
+    { id: 'verificaciones', label: 'Verificaciones', icon: Activity, description: 'Verifica cumplimiento de medidas preventivas' },
+    { id: 'matriz', label: 'Matriz PxC', icon: LayoutDashboard, description: 'Visualiza la matriz de riesgos' },
+    { id: 'parametros', label: 'Parametros', icon: Settings, description: 'Configura escalas y criterios' },
+  ] as const
+  
+  return (
+    <div className="space-y-6">
+      {/* View Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10">
+            <ShieldAlert className="h-5 w-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">{viewName}</h2>
+            <p className="text-sm text-muted-foreground">Vista tipo Matriz de Riesgo (IPER)</p>
+          </div>
+        </div>
+        <Badge variant="outline" className="border-red-500/50 text-red-600">
+          Logica Clonada
+        </Badge>
+      </div>
+      
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 border-b overflow-x-auto">
+        {tabConfig.map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                isActive 
+                  ? 'border-red-500 text-red-600' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+      
+      {/* Tab Content */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {tabConfig.find(t => t.id === activeTab)?.label}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {tabConfig.find(t => t.id === activeTab)?.description}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {activeTab === 'identificacion' && (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card className="border-2 border-dashed">
+                  <CardContent className="pt-6 text-center">
+                    <div className="text-2xl font-bold">{viewData.procesos.length}</div>
+                    <p className="text-sm text-muted-foreground">Procesos</p>
+                    <Button variant="outline" size="sm" className="mt-3">
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-dashed">
+                  <CardContent className="pt-6 text-center">
+                    <div className="text-2xl font-bold">{viewData.tareas.length}</div>
+                    <p className="text-sm text-muted-foreground">Tareas</p>
+                    <Button variant="outline" size="sm" className="mt-3">
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-dashed">
+                  <CardContent className="pt-6 text-center">
+                    <div className="text-2xl font-bold">{viewData.filasIPER.length}</div>
+                    <p className="text-sm text-muted-foreground">Filas IPER</p>
+                    <Button variant="outline" size="sm" className="mt-3">
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {viewData.procesos.length === 0 && (
+                <div className="py-8 text-center border-2 border-dashed rounded-lg mt-4">
+                  <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <h3 className="font-medium text-muted-foreground mb-2">Comienza identificando procesos</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Define los procesos de tu organizacion para luego agregar tareas y peligros
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'evaluacion' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">Evaluacion de Riesgos</h3>
+              <p className="text-sm text-muted-foreground">
+                Evalua cada riesgo con Probabilidad x Consecuencia para obtener el VEP
+              </p>
+            </div>
+          )}
+          
+          {activeTab === 'verificaciones' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">Verificaciones</h3>
+              <p className="text-sm text-muted-foreground">
+                Verifica el cumplimiento de las medidas preventivas definidas
+              </p>
+            </div>
+          )}
+          
+          {activeTab === 'matriz' && (
+            <div className="py-8">
+              <div className="text-center mb-6">
+                <h3 className="font-medium mb-2">Matriz de Probabilidad x Consecuencia</h3>
+                <p className="text-sm text-muted-foreground">
+                  Visualizacion de riesgos segun su nivel
+                </p>
+              </div>
+              {/* Simple 5x5 matrix visualization */}
+              <div className="max-w-md mx-auto">
+                <div className="grid grid-cols-6 gap-1 text-xs">
+                  <div className="p-2"></div>
+                  {[1, 2, 3, 4, 5].map(c => (
+                    <div key={c} className="p-2 text-center font-medium">C{c}</div>
+                  ))}
+                  {[5, 4, 3, 2, 1].map(p => (
+                    <React.Fragment key={p}>
+                      <div className="p-2 font-medium">P{p}</div>
+                      {[1, 2, 3, 4, 5].map(c => {
+                        const vep = p * c
+                        let color = 'bg-green-100 text-green-800'
+                        if (vep > 16) color = 'bg-red-100 text-red-800'
+                        else if (vep > 9) color = 'bg-orange-100 text-orange-800'
+                        else if (vep > 4) color = 'bg-yellow-100 text-yellow-800'
+                        return (
+                          <div key={`${p}-${c}`} className={`p-2 text-center rounded ${color}`}>
+                            {vep}
+                          </div>
+                        )
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'parametros' && (
+            <div className="py-12 text-center border-2 border-dashed rounded-lg">
+              <Settings className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="font-medium text-muted-foreground mb-2">Parametros Configurables</h3>
+              <p className="text-sm text-muted-foreground">
+                Define escalas de probabilidad, consecuencia, niveles de riesgo y verificadores
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ---- Main Workspace ----
+// View Logic Types - allows cloning functionality from existing modules
+export type ViewLogicType = 'dashboard' | 'requisitos-legales' | 'matriz-riesgo' | 'table'
+
+export interface CustomViewData {
+  viewId: string
+  logicType: ViewLogicType
   dashboardWidgets: unknown[]
+  // For requisitos-legales type
+  rlData?: {
+    vinculaciones: unknown[]
+    evaluaciones: unknown[]
+    resultados: unknown[]
+    hallazgos: unknown[]
+  }
+  // For matriz-riesgo type
+  mrData?: {
+    procesos: unknown[]
+    tareas: unknown[]
+    filasIPER: unknown[]
+    medidas: unknown[]
+    parametros: unknown
+  }
+}
+
+// View logic type configuration
+const viewLogicConfig: Record<ViewLogicType, { 
+  label: string
+  description: string 
+  icon: React.ElementType
+  color: string
+}> = {
+  'dashboard': {
+    label: 'Dashboard Personalizado',
+    description: 'Crea un dashboard vacio con widgets arrastrables (KPIs, graficos)',
+    icon: LayoutDashboard,
+    color: '#6B7280',
+  },
+  'table': {
+    label: 'Tabla de Datos',
+    description: 'Vista de tabla simple con columnas personalizables',
+    icon: Table2,
+    color: '#3B82F6',
+  },
+  'requisitos-legales': {
+    label: 'Tipo Requisitos Legales',
+    description: 'Clona la logica de vinculaciones normativas, evaluaciones de cumplimiento y hallazgos',
+    icon: Scale,
+    color: '#0D9488',
+  },
+  'matriz-riesgo': {
+    label: 'Tipo Matriz de Riesgo',
+    description: 'Clona la logica IPER: procesos, tareas, peligros, riesgos y medidas preventivas',
+    icon: ShieldAlert,
+    color: '#DC2626',
+  },
 }
 
 export function AppWorkspace() {
@@ -593,10 +993,11 @@ export function AppWorkspace() {
   // Dialog states for adding/deleting views
   const [showAddViewDialog, setShowAddViewDialog] = useState(false)
   const [newViewName, setNewViewName] = useState('')
+  const [selectedLogicType, setSelectedLogicType] = useState<ViewLogicType>('dashboard')
   const [viewToDelete, setViewToDelete] = useState<AppView | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
-  // Store custom view dashboard data
+  // Store custom view data with logic type
   const [customViewData, setCustomViewData] = useState<CustomViewData[]>([])
 
   useEffect(() => {
@@ -605,30 +1006,67 @@ export function AppWorkspace() {
     }
   }, [initialViewId])
   
-  // Create a new custom view
+  // Create a new custom view with selected logic type
   const handleCreateView = () => {
     if (!newViewName.trim() || !activeApp) return
+    
+    const viewType: ViewType = selectedLogicType === 'table' ? 'table' : 'dashboard'
     
     const newView: AppView = {
       id: `view-${Date.now()}`,
       name: newViewName.trim(),
-      type: 'dashboard',
+      type: viewType,
       tableId: activeApp.tables[0]?.id || '',
+      config: {
+        logicType: selectedLogicType,
+      }
     }
     
     const updatedViews = [...activeApp.views, newView]
     updateApp(activeApp.id, { views: updatedViews })
     
-    // Initialize empty dashboard data for this view
-    setCustomViewData(prev => [...prev, { viewId: newView.id, dashboardWidgets: [] }])
+    // Initialize view data based on logic type
+    const newViewData: CustomViewData = {
+      viewId: newView.id,
+      logicType: selectedLogicType,
+      dashboardWidgets: [],
+    }
+    
+    // Initialize empty data structures for cloned logic types
+    if (selectedLogicType === 'requisitos-legales') {
+      newViewData.rlData = {
+        vinculaciones: [],
+        evaluaciones: [],
+        resultados: [],
+        hallazgos: [],
+      }
+    } else if (selectedLogicType === 'matriz-riesgo') {
+      newViewData.mrData = {
+        procesos: [],
+        tareas: [],
+        filasIPER: [],
+        medidas: [],
+        parametros: {},
+      }
+    }
+    
+    setCustomViewData(prev => [...prev, newViewData])
     
     setActiveViewId(newView.id)
     setNewViewName('')
+    setSelectedLogicType('dashboard')
     setShowAddViewDialog(false)
     
+    const logicLabel = viewLogicConfig[selectedLogicType].label
     toast.success('Vista creada', {
-      description: `La vista "${newView.name}" ha sido creada exitosamente.`,
+      description: `La vista "${newView.name}" (${logicLabel}) ha sido creada exitosamente.`,
     })
+  }
+  
+  // Get view logic type
+  const getViewLogicType = (view: AppView): ViewLogicType => {
+    const config = view.config as { logicType?: ViewLogicType } | undefined
+    return config?.logicType || 'dashboard'
   }
   
   // Delete a view
@@ -736,9 +1174,48 @@ export function AppWorkspace() {
       return <InteractiveDashboard viewId="default" viewName="Dashboard" />
     }
     
-    // Custom views (created by user) always show interactive dashboard
+    // Custom views (created by user) - render based on logic type
     if (isCustomView(activeView)) {
-      return <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
+      const logicType = getViewLogicType(activeView)
+      const viewData = customViewData.find(d => d.viewId === activeView.id)
+      
+      switch (logicType) {
+        case 'requisitos-legales':
+          return (
+            <CustomRequisitosLegalesView 
+              viewId={activeView.id} 
+              viewName={activeView.name}
+              data={viewData?.rlData}
+              onUpdateData={(rlData) => {
+                setCustomViewData(prev => prev.map(d => 
+                  d.viewId === activeView.id ? { ...d, rlData } : d
+                ))
+              }}
+            />
+          )
+        case 'matriz-riesgo':
+          return (
+            <CustomMatrizRiesgoView 
+              viewId={activeView.id} 
+              viewName={activeView.name}
+              data={viewData?.mrData}
+              onUpdateData={(mrData) => {
+                setCustomViewData(prev => prev.map(d => 
+                  d.viewId === activeView.id ? { ...d, mrData } : d
+                ))
+              }}
+            />
+          )
+        case 'table':
+          // For custom table views, create a simple editable table
+          if (activeTable) {
+            return <TableView table={activeTable} app={activeApp} onUpdateApp={handleUpdateApp} />
+          }
+          return <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
+        case 'dashboard':
+        default:
+          return <InteractiveDashboard viewId={activeView.id} viewName={activeView.name} />
+      }
     }
 
     if (!activeTable) {
@@ -873,12 +1350,18 @@ export function AppWorkspace() {
       </div>
       
       {/* Add View Dialog */}
-      <Dialog open={showAddViewDialog} onOpenChange={setShowAddViewDialog}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showAddViewDialog} onOpenChange={(open) => {
+        setShowAddViewDialog(open)
+        if (!open) {
+          setNewViewName('')
+          setSelectedLogicType('dashboard')
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nueva Vista</DialogTitle>
             <DialogDescription>
-              Crea una nueva vista personalizada para este modulo.
+              Crea una nueva vista personalizada. Selecciona el tipo de logica que deseas utilizar.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -889,12 +1372,52 @@ export function AppWorkspace() {
                 placeholder="Ej: Mi Dashboard, Vista Resumen..."
                 value={newViewName}
                 onChange={(e) => setNewViewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newViewName.trim()) {
-                    handleCreateView()
-                  }
-                }}
               />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Tipo de Vista</Label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Selecciona la funcionalidad base que deseas clonar para esta vista
+              </p>
+              <div className="grid gap-2">
+                {(Object.keys(viewLogicConfig) as ViewLogicType[]).map((logicType) => {
+                  const config = viewLogicConfig[logicType]
+                  const Icon = config.icon
+                  const isSelected = selectedLogicType === logicType
+                  
+                  return (
+                    <button
+                      key={logicType}
+                      type="button"
+                      onClick={() => setSelectedLogicType(logicType)}
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-muted-foreground/50 hover:bg-muted/50'
+                      }`}
+                    >
+                      <div 
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `${config.color}15`, color: config.color }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{config.label}</span>
+                          {isSelected && (
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          {config.description}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>
