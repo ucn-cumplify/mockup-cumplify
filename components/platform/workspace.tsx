@@ -1032,21 +1032,62 @@ export function AppWorkspace() {
       dashboardWidgets: [],
     }
     
-    // Initialize empty data structures for cloned logic types
+    // Initialize data structures with sample data for cloned logic types
     if (selectedLogicType === 'requisitos-legales') {
       newViewData.rlData = {
-        vinculaciones: [],
-        evaluaciones: [],
-        resultados: [],
-        hallazgos: [],
+        vinculaciones: [
+          { id: 'vinc-1', norma: 'D.S. 40/2012', articulo: '5', descripcion: 'Reglamento sobre prevencion de riesgos profesionales', unidadControl: 'Planta Principal', criticidad: 'alta', estado: 'cumple', fechaVinculacion: '2024-01-15' },
+          { id: 'vinc-2', norma: 'D.S. 40/2012', articulo: '8', descripcion: 'Obligaciones del empleador', unidadControl: 'Bodega Central', criticidad: 'media', estado: 'parcial', fechaVinculacion: '2024-01-20' },
+          { id: 'vinc-3', norma: 'Ley 19.300', articulo: '11', descripcion: 'Ley sobre bases generales del medio ambiente', unidadControl: 'Area Produccion', criticidad: 'alta', estado: 'no-cumple', fechaVinculacion: '2024-02-01' },
+          { id: 'vinc-4', norma: 'D.S. 594/1999', articulo: '3', descripcion: 'Condiciones sanitarias y ambientales basicas', unidadControl: 'Oficinas', criticidad: 'baja', estado: 'cumple', fechaVinculacion: '2024-02-10' },
+        ],
+        evaluaciones: [
+          { id: 'eval-1', fecha: '2024-01-15', responsable: 'Juan Perez', estado: 'completada', porcentajeCumplimiento: 85 },
+          { id: 'eval-2', fecha: '2024-02-20', responsable: 'Maria Garcia', estado: 'completada', porcentajeCumplimiento: 72 },
+        ],
+        resultados: [
+          { id: 'res-1', vinculacionId: 'vinc-1', evaluacionId: 'eval-1', estado: 'cumple', evidencia: 'Documentacion completa', observaciones: '' },
+          { id: 'res-2', vinculacionId: 'vinc-2', evaluacionId: 'eval-1', estado: 'parcial', evidencia: 'Parcialmente implementado', observaciones: 'Falta capacitacion' },
+        ],
+        hallazgos: [
+          { id: 'hall-1', descripcion: 'Falta senaletica de seguridad en area de produccion', tipo: 'nc-menor', estado: 'en-proceso', fechaDeteccion: '2024-02-15', responsable: 'Pedro Martinez' },
+          { id: 'hall-2', descripcion: 'Plan de emergencia requiere actualizacion', tipo: 'nc-mayor', estado: 'abierto', fechaDeteccion: '2024-02-20', responsable: 'Ana Rodriguez' },
+        ],
       }
     } else if (selectedLogicType === 'matriz-riesgo') {
       newViewData.mrData = {
-        procesos: [],
-        tareas: [],
-        filasIPER: [],
-        medidas: [],
-        parametros: {},
+        procesos: [
+          { id: 'proc-1', nombre: 'Operaciones de Planta', descripcion: 'Procesos operativos principales' },
+          { id: 'proc-2', nombre: 'Mantenimiento', descripcion: 'Actividades de mantenimiento preventivo y correctivo' },
+          { id: 'proc-3', nombre: 'Almacenamiento', descripcion: 'Gestion de bodega y materiales' },
+        ],
+        tareas: [
+          { id: 'tarea-1', procesoId: 'proc-1', nombre: 'Operacion de maquinaria', descripcion: 'Manejo de equipos industriales' },
+          { id: 'tarea-2', procesoId: 'proc-2', nombre: 'Mantenimiento preventivo', descripcion: 'Revision periodica de equipos' },
+          { id: 'tarea-3', procesoId: 'proc-3', nombre: 'Manejo de materiales', descripcion: 'Carga y descarga de insumos' },
+        ],
+        filasIPER: [
+          { id: 'iper-1', tareaId: 'tarea-1', peligro: 'Ruido excesivo', riesgo: 'Perdida auditiva', probabilidad: 4, consecuencia: 3, valorVEP: 12, nivelRiesgo: 'alto', medidas: ['Uso de protectores auditivos', 'Rotacion de personal'] },
+          { id: 'iper-2', tareaId: 'tarea-1', peligro: 'Partes moviles expuestas', riesgo: 'Atrapamiento', probabilidad: 2, consecuencia: 5, valorVEP: 10, nivelRiesgo: 'alto', medidas: ['Guardas de proteccion', 'Capacitacion'] },
+          { id: 'iper-3', tareaId: 'tarea-2', peligro: 'Trabajo en altura', riesgo: 'Caida a distinto nivel', probabilidad: 3, consecuencia: 5, valorVEP: 15, nivelRiesgo: 'alto', medidas: ['Linea de vida', 'Arnes de seguridad', 'Check de seguridad'] },
+          { id: 'iper-4', tareaId: 'tarea-2', peligro: 'Contacto electrico', riesgo: 'Electrocucion', probabilidad: 2, consecuencia: 5, valorVEP: 10, nivelRiesgo: 'alto', medidas: ['Bloqueo y etiquetado', 'EPP dielectrico'] },
+          { id: 'iper-5', tareaId: 'tarea-3', peligro: 'Levantamiento manual', riesgo: 'Lesion dorsolumbar', probabilidad: 3, consecuencia: 2, valorVEP: 6, nivelRiesgo: 'medio', medidas: ['Capacitacion ergonomica', 'Ayudas mecanicas'] },
+        ],
+        medidas: [
+          { id: 'med-1', descripcion: 'Uso de protectores auditivos', tipo: 'epp', responsable: 'Supervisor SST' },
+          { id: 'med-2', descripcion: 'Guardas de proteccion', tipo: 'ingenieria', responsable: 'Jefe Mantenimiento' },
+          { id: 'med-3', descripcion: 'Linea de vida', tipo: 'ingenieria', responsable: 'Coordinador Altura' },
+        ],
+        parametros: {
+          escalaProbabilidad: [1, 2, 3, 4, 5],
+          escalaConsecuencia: [1, 2, 3, 4, 5],
+          nivelesRiesgo: {
+            bajo: { min: 1, max: 4, color: '#22c55e' },
+            medio: { min: 5, max: 9, color: '#f59e0b' },
+            alto: { min: 10, max: 16, color: '#f97316' },
+            critico: { min: 17, max: 25, color: '#ef4444' },
+          }
+        },
       }
     }
     

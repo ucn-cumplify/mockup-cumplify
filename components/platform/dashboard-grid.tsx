@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 import {
   GripVertical,
   Trash2,
@@ -33,8 +34,15 @@ import {
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
-  Eye
+  Eye,
+  Download,
+  Upload,
+  Copy,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { Textarea } from '@/components/ui/textarea'
 
 // ---- Types ----
 export type DashboardWidgetType = 'kpi' | 'pie-chart' | 'bar-chart' | 'custom-table' | 'mini-requisitos' | 'mini-matriz'
@@ -56,18 +64,18 @@ interface GridCell {
 }
 
 // ---- Constants ----
-const GRID_COLS = 4
-const GRID_ROWS = 6
-const CELL_SIZE = 150
+const GRID_COLS = 6
+const GRID_ROWS = 8
+const CELL_SIZE = 120
 
-// Widget size configurations (fixed sizes)
+// Widget size configurations (fixed sizes - updated for 6x8 grid)
 const widgetSizeConfig: Record<DashboardWidgetType, { cols: number; rows: number }> = {
   'kpi': { cols: 1, rows: 1 },
   'pie-chart': { cols: 2, rows: 2 },
-  'bar-chart': { cols: 2, rows: 1 },
-  'custom-table': { cols: 4, rows: 3 },
-  'mini-requisitos': { cols: 4, rows: 4 },
-  'mini-matriz': { cols: 4, rows: 4 },
+  'bar-chart': { cols: 3, rows: 2 },
+  'custom-table': { cols: 6, rows: 3 },
+  'mini-requisitos': { cols: 3, rows: 4 },
+  'mini-matriz': { cols: 3, rows: 4 },
 }
 
 // Widget categories
@@ -279,55 +287,76 @@ function getDefaultWidgetData(type: DashboardWidgetType): Record<string, unknown
           { id: 'col-1', name: 'Nombre', type: 'text' },
           { id: 'col-2', name: 'Estado', type: 'select', options: ['Activo', 'Inactivo', 'Pendiente'] },
           { id: 'col-3', name: 'Fecha', type: 'date' },
+          { id: 'col-4', name: 'Responsable', type: 'text' },
         ] as TableColumn[],
-        rows: [] as TableRow[],
+        rows: [
+          { id: 'row-1', cells: { 'col-1': 'Tarea de revision', 'col-2': 'Activo', 'col-3': '2024-03-15', 'col-4': 'Juan Perez' } },
+          { id: 'row-2', cells: { 'col-1': 'Inspeccion mensual', 'col-2': 'Pendiente', 'col-3': '2024-03-20', 'col-4': 'Maria Garcia' } },
+          { id: 'row-3', cells: { 'col-1': 'Capacitacion SST', 'col-2': 'Activo', 'col-3': '2024-03-10', 'col-4': 'Carlos Lopez' } },
+        ] as TableRow[],
         title: 'Mi Tabla',
       }
     case 'mini-requisitos':
+      // Pre-loaded sample data for requisitos legales
       return {
         title: 'Obligaciones Legales',
-        vinculaciones: [] as Array<{
-          id: string
-          norma: string
-          articulo: string
-          unidadControl: string
-          criticidad: 'alta' | 'media' | 'baja'
-          estado: 'pendiente' | 'cumple' | 'no-cumple' | 'parcial'
-        }>,
-        evaluaciones: [] as Array<{
-          id: string
-          fecha: string
-          responsable: string
-          resultados: number
-        }>,
-        hallazgos: [] as Array<{
-          id: string
-          descripcion: string
-          tipo: 'nc-mayor' | 'nc-menor' | 'observacion'
-          estado: 'abierto' | 'en-proceso' | 'cerrado'
-        }>,
+        vinculaciones: [
+          { id: 'vinc-1', norma: 'D.S. 40/2012', articulo: '5', unidadControl: 'Planta Principal', criticidad: 'alta' as const, estado: 'cumple' as const },
+          { id: 'vinc-2', norma: 'D.S. 40/2012', articulo: '8', unidadControl: 'Bodega Central', criticidad: 'media' as const, estado: 'parcial' as const },
+          { id: 'vinc-3', norma: 'Ley 19.300', articulo: '11', unidadControl: 'Area Produccion', criticidad: 'alta' as const, estado: 'no-cumple' as const },
+          { id: 'vinc-4', norma: 'D.S. 594/1999', articulo: '3', unidadControl: 'Oficinas', criticidad: 'baja' as const, estado: 'cumple' as const },
+          { id: 'vinc-5', norma: 'D.S. 594/1999', articulo: '12', unidadControl: 'Laboratorio', criticidad: 'media' as const, estado: 'pendiente' as const },
+        ],
+        evaluaciones: [
+          { id: 'eval-1', fecha: '2024-01-15', responsable: 'Juan Perez', resultados: 85 },
+          { id: 'eval-2', fecha: '2024-02-20', responsable: 'Maria Garcia', resultados: 72 },
+        ],
+        hallazgos: [
+          { id: 'hall-1', descripcion: 'Falta senaletica de seguridad', tipo: 'nc-menor' as const, estado: 'en-proceso' as const },
+          { id: 'hall-2', descripcion: 'Plan de emergencia desactualizado', tipo: 'nc-mayor' as const, estado: 'abierto' as const },
+        ],
       }
     case 'mini-matriz':
+      // Pre-loaded sample data for matriz de riesgo
       return {
         title: 'Matriz de Riesgo',
-        procesos: [] as Array<{
-          id: string
-          nombre: string
-          tareas: Array<{
-            id: string
-            nombre: string
-            peligros: Array<{
-              id: string
-              descripcion: string
-              riesgo: string
-              probabilidad: number
-              consecuencia: number
-              vep: number
-              nivel: 'bajo' | 'medio' | 'alto' | 'critico'
-              medidas: string[]
-            }>
-          }>
-        }>,
+        procesos: [
+          {
+            id: 'proc-1',
+            nombre: 'Operaciones de Planta',
+            tareas: [{
+              id: 'tarea-1',
+              nombre: 'Operacion de maquinaria',
+              peligros: [
+                { id: 'pel-1', descripcion: 'Ruido excesivo', riesgo: 'Perdida auditiva', probabilidad: 4, consecuencia: 3, vep: 12, nivel: 'alto' as const, medidas: ['Uso de protectores auditivos'] },
+                { id: 'pel-2', descripcion: 'Partes moviles expuestas', riesgo: 'Atrapamiento', probabilidad: 2, consecuencia: 5, vep: 10, nivel: 'alto' as const, medidas: ['Guardas de proteccion'] },
+              ]
+            }]
+          },
+          {
+            id: 'proc-2',
+            nombre: 'Mantenimiento',
+            tareas: [{
+              id: 'tarea-2',
+              nombre: 'Mantenimiento preventivo',
+              peligros: [
+                { id: 'pel-3', descripcion: 'Trabajo en altura', riesgo: 'Caida a distinto nivel', probabilidad: 3, consecuencia: 5, vep: 15, nivel: 'alto' as const, medidas: ['Linea de vida', 'Arnes de seguridad'] },
+                { id: 'pel-4', descripcion: 'Contacto electrico', riesgo: 'Electrocucion', probabilidad: 2, consecuencia: 5, vep: 10, nivel: 'alto' as const, medidas: ['Bloqueo y etiquetado'] },
+              ]
+            }]
+          },
+          {
+            id: 'proc-3',
+            nombre: 'Almacenamiento',
+            tareas: [{
+              id: 'tarea-3',
+              nombre: 'Manejo de materiales',
+              peligros: [
+                { id: 'pel-5', descripcion: 'Levantamiento manual', riesgo: 'Lesion dorsolumbar', probabilidad: 3, consecuencia: 2, vep: 6, nivel: 'medio' as const, medidas: ['Capacitacion ergonomica'] },
+              ]
+            }]
+          },
+        ],
         configuracion: {
           escalaProbabilidad: [1, 2, 3, 4, 5],
           escalaConsecuencia: [1, 2, 3, 4, 5],
@@ -344,10 +373,117 @@ function getDefaultWidgetData(type: DashboardWidgetType): Record<string, unknown
   }
 }
 
+// ---- Generic Helper Functions (Reusable for any app) ----
+
+// Export dashboard to JSON file
+function handleExportDashboard(widgets: DashboardWidget[]) {
+  const exportData = {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    gridConfig: { cols: GRID_COLS, rows: GRID_ROWS },
+    widgets: widgets.map(w => ({
+      ...w,
+      // Remove runtime-specific IDs for clean export
+      id: undefined,
+    })),
+  }
+  
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `dashboard-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  
+  toast.success('Dashboard exportado', {
+    description: `${widgets.length} widgets exportados correctamente`
+  })
+}
+
+// Import dashboard from JSON file
+function handleImportDashboard(
+  e: React.ChangeEvent<HTMLInputElement>,
+  setWidgets: React.Dispatch<React.SetStateAction<DashboardWidget[]>>
+) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    try {
+      const data = JSON.parse(event.target?.result as string)
+      if (data.widgets && Array.isArray(data.widgets)) {
+        const importedWidgets = data.widgets.map((w: Partial<DashboardWidget>, idx: number) => ({
+          ...w,
+          id: `widget-imported-${Date.now()}-${idx}`,
+        })) as DashboardWidget[]
+        
+        setWidgets(importedWidgets)
+        toast.success('Dashboard importado', {
+          description: `${importedWidgets.length} widgets importados correctamente`
+        })
+      }
+    } catch {
+      toast.error('Error al importar', {
+        description: 'El archivo no tiene el formato correcto'
+      })
+    }
+  }
+  reader.readAsText(file)
+  e.target.value = '' // Reset input
+}
+
+// Duplicate all widgets (offset by 1 cell)
+function handleDuplicateDashboard(
+  widgets: DashboardWidget[],
+  setWidgets: React.Dispatch<React.SetStateAction<DashboardWidget[]>>
+) {
+  const duplicated = widgets.map(w => ({
+    ...w,
+    id: `widget-dup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    gridPosition: {
+      col: Math.min(w.gridPosition.col + 1, GRID_COLS - w.gridSize.cols),
+      row: Math.min(w.gridPosition.row + 1, GRID_ROWS - w.gridSize.rows),
+    }
+  }))
+  
+  setWidgets(prev => [...prev, ...duplicated])
+  toast.success('Widgets duplicados', {
+    description: `${duplicated.length} widgets duplicados`
+  })
+}
+
+// Generic CRUD operations for any data type
+export const genericCRUD = {
+  create: <T extends { id: string }>(items: T[], newItem: Omit<T, 'id'>): T[] => {
+    return [...items, { ...newItem, id: `item-${Date.now()}` } as T]
+  },
+  update: <T extends { id: string }>(items: T[], id: string, updates: Partial<T>): T[] => {
+    return items.map(item => item.id === id ? { ...item, ...updates } : item)
+  },
+  delete: <T extends { id: string }>(items: T[], id: string): T[] => {
+    return items.filter(item => item.id !== id)
+  },
+  findById: <T extends { id: string }>(items: T[], id: string): T | undefined => {
+    return items.find(item => item.id === id)
+  },
+}
+
+// Generic statistics calculator
+export const calculateStats = <T>(items: T[], groupByKey: keyof T): Record<string, number> => {
+  return items.reduce((acc, item) => {
+    const key = String(item[groupByKey])
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+}
+
 // ---- Main Dashboard Grid Component ----
 export function DashboardGrid({ viewName = 'Dashboard' }: { viewName?: string }) {
   const {
     widgets,
+    setWidgets,
     isEditMode,
     setIsEditMode,
     selectedWidgetId,
@@ -421,8 +557,40 @@ export function DashboardGrid({ viewName = 'Dashboard' }: { viewName?: string })
               Modo Edicion
             </Badge>
           )}
+          <Badge variant="outline" className="text-xs">{GRID_COLS}x{GRID_ROWS}</Badge>
         </div>
         <div className="flex items-center gap-2">
+          {/* Import/Export Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportDashboard(widgets)}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => document.getElementById('import-file')?.click()}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleDuplicateDashboard(widgets, setWidgets)}>
+                <Copy className="w-4 h-4 mr-2" />
+                Duplicar Widgets
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <input
+            id="import-file"
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(e) => handleImportDashboard(e, setWidgets)}
+          />
+          
           {isEditMode && (
             <WidgetPalette onDragStart={setDragWidgetType} onDragEnd={() => setDragWidgetType(null)} />
           )}
@@ -776,36 +944,113 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
   }
 }
 
-// ---- KPI Widget (1x1) ----
+// ---- KPI Widget (1x1) - Editable ----
 function KPIWidget({ widget }: { widget: DashboardWidget }) {
-  const data = widget.data as { value: number; label: string; unit?: string; trend?: string }
+  const { setWidgets, isEditMode } = useDashboardGrid()
+  const data = widget.data as { value: number; label: string; unit?: string; trend?: string; color?: string }
+  const [showEdit, setShowEdit] = useState(false)
+  const [editData, setEditData] = useState(data)
+
+  const handleSave = () => {
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: editData } : w))
+    setShowEdit(false)
+  }
+
+  const isPositive = data.trend?.startsWith('+')
+  const isNegative = data.trend?.startsWith('-')
 
   return (
-    <Card className="h-full">
-      <CardContent className="flex flex-col items-center justify-center h-full p-3">
-        <div className="text-3xl font-bold text-foreground">
-          {data.value}{data.unit}
-        </div>
-        <div className="text-xs text-muted-foreground mt-1">{data.label}</div>
-        {data.trend && (
-          <Badge variant="secondary" className="mt-2 text-xs">
-            {data.trend}
-          </Badge>
+    <>
+      <Card className="h-full group relative">
+        {isEditMode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onClick={() => setShowEdit(true)}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
         )}
-      </CardContent>
-    </Card>
+        <CardContent className="flex flex-col items-center justify-center h-full p-2">
+          <div className="text-2xl font-bold" style={{ color: data.color || 'inherit' }}>
+            {data.value}{data.unit}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5 text-center line-clamp-1">{data.label}</div>
+          {data.trend && (
+            <Badge 
+              variant="secondary" 
+              className={`mt-1 text-xs ${isPositive ? 'bg-green-100 text-green-700' : isNegative ? 'bg-red-100 text-red-700' : ''}`}
+            >
+              {isPositive && <TrendingUp className="h-3 w-3 mr-0.5" />}
+              {isNegative && <TrendingDown className="h-3 w-3 mr-0.5" />}
+              {data.trend}
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Editar KPI</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Valor</Label>
+              <Input type="number" value={editData.value} onChange={(e) => setEditData(p => ({ ...p, value: Number(e.target.value) }))} className="h-8" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Etiqueta</Label>
+              <Input value={editData.label} onChange={(e) => setEditData(p => ({ ...p, label: e.target.value }))} className="h-8" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Unidad</Label>
+                <Input value={editData.unit || ''} onChange={(e) => setEditData(p => ({ ...p, unit: e.target.value }))} placeholder="%, $, etc" className="h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tendencia</Label>
+                <Input value={editData.trend || ''} onChange={(e) => setEditData(p => ({ ...p, trend: e.target.value }))} placeholder="+5%, -2%" className="h-8" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Color</Label>
+              <div className="flex gap-2">
+                {['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#000000'].map(color => (
+                  <button
+                    key={color}
+                    className={`w-6 h-6 rounded-full border-2 ${editData.color === color ? 'border-foreground' : 'border-transparent'}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setEditData(p => ({ ...p, color }))}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
-// ---- Pie Chart Widget (2x2) ----
+// ---- Pie Chart Widget (2x2) - Editable ----
 function PieChartWidget({ widget }: { widget: DashboardWidget }) {
+  const { setWidgets, isEditMode } = useDashboardGrid()
   const data = widget.data as { items: { label: string; value: number; color: string }[] }
+  const [showEdit, setShowEdit] = useState(false)
+  const [editItems, setEditItems] = useState(data.items)
+  
   const total = data.items.reduce((acc, item) => acc + item.value, 0)
 
   // Calculate segments
   let currentAngle = 0
   const segments = data.items.map(item => {
-    const percentage = (item.value / total) * 100
+    const percentage = total > 0 ? (item.value / total) * 100 : 0
     const angle = (percentage / 100) * 360
     const startAngle = currentAngle
     currentAngle += angle
@@ -821,71 +1066,218 @@ function PieChartWidget({ widget }: { widget: DashboardWidget }) {
     const x2 = 50 + radius * Math.cos(endRad)
     const y2 = 50 + radius * Math.sin(endRad)
     const largeArc = angle > 180 ? 1 : 0
-
     return `M 50 50 L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`
   }
 
-  return (
-    <Card className="h-full">
-      <CardHeader className="pb-2 pt-3 px-3">
-        <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex items-center justify-between p-3 pt-0 h-[calc(100%-48px)]">
-        {/* Pie Chart */}
-        <div className="relative w-32 h-32">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            {segments.map((seg, i) => (
-              <path
-                key={i}
-                d={createPiePath(seg.startAngle, seg.angle, 40)}
-                fill={seg.color}
-                className="transition-opacity hover:opacity-80"
-              />
-            ))}
-            <circle cx="50" cy="50" r="20" fill="white" className="dark:fill-background" />
-            <text x="50" y="54" textAnchor="middle" className="text-xs font-bold fill-foreground">
-              {total}
-            </text>
-          </svg>
-        </div>
+  const handleSave = () => {
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: { items: editItems } } : w))
+    setShowEdit(false)
+  }
 
-        {/* Legend */}
-        <div className="flex-1 pl-4 space-y-2">
-          {segments.map((seg, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: seg.color }} />
-              <span className="flex-1 text-muted-foreground">{seg.label}</span>
-              <span className="font-medium">{seg.percentage.toFixed(0)}%</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+  const handleAddItem = () => {
+    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+    setEditItems(prev => [...prev, { label: 'Nuevo', value: 10, color: colors[prev.length % colors.length] }])
+  }
+
+  const handleUpdateItem = (idx: number, field: string, value: string | number) => {
+    setEditItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  }
+
+  const handleRemoveItem = (idx: number) => {
+    setEditItems(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <>
+      <Card className="h-full group relative">
+        {isEditMode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onClick={() => { setEditItems(data.items); setShowEdit(true) }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="text-xs font-medium">{widget.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between p-2 pt-0 h-[calc(100%-36px)]">
+          {/* Pie Chart */}
+          <div className="relative w-24 h-24 shrink-0">
+            <svg viewBox="0 0 100 100" className="w-full h-full">
+              {segments.map((seg, i) => (
+                <path
+                  key={i}
+                  d={createPiePath(seg.startAngle, seg.angle, 40)}
+                  fill={seg.color}
+                  className="transition-opacity hover:opacity-80"
+                />
+              ))}
+              <circle cx="50" cy="50" r="18" fill="white" className="dark:fill-background" />
+              <text x="50" y="54" textAnchor="middle" className="text-xs font-bold fill-foreground">
+                {total}
+              </text>
+            </svg>
+          </div>
+
+          {/* Legend */}
+          <div className="flex-1 pl-2 space-y-1 overflow-auto max-h-full">
+            {segments.map((seg, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-xs">
+                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: seg.color }} />
+                <span className="flex-1 text-muted-foreground truncate">{seg.label}</span>
+                <span className="font-medium">{seg.percentage.toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Grafico</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 max-h-[50vh] overflow-auto">
+            {editItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg">
+                <input
+                  type="color"
+                  value={item.color}
+                  onChange={(e) => handleUpdateItem(idx, 'color', e.target.value)}
+                  className="w-8 h-8 rounded border-0 cursor-pointer"
+                />
+                <Input
+                  value={item.label}
+                  onChange={(e) => handleUpdateItem(idx, 'label', e.target.value)}
+                  placeholder="Etiqueta"
+                  className="h-8 flex-1"
+                />
+                <Input
+                  type="number"
+                  value={item.value}
+                  onChange={(e) => handleUpdateItem(idx, 'value', Number(e.target.value))}
+                  className="h-8 w-20"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => handleRemoveItem(idx)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full" onClick={handleAddItem}>
+              <Plus className="h-4 w-4 mr-1" />
+              Agregar Segmento
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
-// ---- Bar Chart Widget (2x1) ----
+// ---- Bar Chart Widget (3x2) - Editable ----
 function BarChartWidget({ widget }: { widget: DashboardWidget }) {
-  const data = widget.data as { items: { label: string; value: number }[] }
-  const maxValue = Math.max(...data.items.map(item => item.value))
+  const { setWidgets, isEditMode } = useDashboardGrid()
+  const data = widget.data as { items: { label: string; value: number; color?: string }[] }
+  const [showEdit, setShowEdit] = useState(false)
+  const [editItems, setEditItems] = useState(data.items)
+  
+  const maxValue = Math.max(...data.items.map(item => item.value), 1)
+
+  const handleSave = () => {
+    setWidgets(prev => prev.map(w => w.id === widget.id ? { ...w, data: { items: editItems } } : w))
+    setShowEdit(false)
+  }
+
+  const handleAddItem = () => {
+    setEditItems(prev => [...prev, { label: 'Nuevo', value: 50 }])
+  }
+
+  const handleUpdateItem = (idx: number, field: string, value: string | number) => {
+    setEditItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  }
+
+  const handleRemoveItem = (idx: number) => {
+    setEditItems(prev => prev.filter((_, i) => i !== idx))
+  }
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-1 pt-2 px-3">
-        <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex items-end gap-1 p-3 pt-0 h-[calc(100%-40px)]">
-        {data.items.map((item, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div
-              className="w-full bg-primary rounded-t transition-all"
-              style={{ height: `${(item.value / maxValue) * 60}px` }}
-            />
-            <span className="text-xs text-muted-foreground">{item.label}</span>
+    <>
+      <Card className="h-full group relative">
+        {isEditMode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            onClick={() => { setEditItems(data.items); setShowEdit(true) }}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
+        <CardHeader className="pb-1 pt-2 px-3">
+          <CardTitle className="text-xs font-medium">{widget.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-end gap-2 p-3 pt-0 h-[calc(100%-36px)]">
+          {data.items.map((item, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+              <span className="text-xs font-medium">{item.value}</span>
+              <div
+                className="w-full rounded-t transition-all"
+                style={{ 
+                  height: `${Math.max((item.value / maxValue) * 100, 4)}%`,
+                  backgroundColor: item.color || 'hsl(var(--primary))',
+                  minHeight: '4px'
+                }}
+              />
+              <span className="text-xs text-muted-foreground truncate w-full text-center">{item.label}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Grafico de Barras</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 max-h-[50vh] overflow-auto">
+            {editItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 border rounded-lg">
+                <Input
+                  value={item.label}
+                  onChange={(e) => handleUpdateItem(idx, 'label', e.target.value)}
+                  placeholder="Etiqueta"
+                  className="h-8 flex-1"
+                />
+                <Input
+                  type="number"
+                  value={item.value}
+                  onChange={(e) => handleUpdateItem(idx, 'value', Number(e.target.value))}
+                  className="h-8 w-24"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => handleRemoveItem(idx)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="w-full" onClick={handleAddItem}>
+              <Plus className="h-4 w-4 mr-1" />
+              Agregar Barra
+            </Button>
           </div>
-        ))}
-      </CardContent>
-    </Card>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
